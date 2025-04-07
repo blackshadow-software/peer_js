@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PeerJS Video Chat</title>
+</head>
+<body>
+  <h2>PeerJS Video Chat</h2>
+  <div>
+    Your ID: <span id="my-id"></span><br><br>
+    Call Peer ID: <input type="text" id="peer-id">
+    <button onclick="startCall()">Call</button>
+  </div>
+
+  <h3>My Video</h3>
+  <video id="my-video" autoplay muted playsinline></video>
+
+  <h3>Remote Video</h3>
+  <video id="remote-video" autoplay playsinline></video>
+
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
