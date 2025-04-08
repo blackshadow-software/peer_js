@@ -1,0 +1,8 @@
+[package]
+name = "peerjs_app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+webbrowser = "1.0"

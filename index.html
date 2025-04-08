@@ -1,23 +1,107 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>PeerJS Video Chat</title>
+  <title>PeerJS Video Chat + Screen Share</title>
+  <style>
+    #my-video {
+      width: 150px;
+      border: 1px solid #333;
+      margin: 10px;
+    }
+  
+    #remote-video {
+      width: 45%;
+      border: 1px solid #333;
+      margin: 10px;
+    }
+  </style>
+  
+  </style>
 </head>
 <body>
-  <h2>PeerJS Video Chat</h2>
-  <div>
-    Your ID: <span id="my-id"></span><br><br>
-    Call Peer ID: <input type="text" id="peer-id">
-    <button onclick="startCall()">Call</button>
-  </div>
+  <h2>PeerJS Video Chat & Screen Share</h2>
 
-  <h3>My Video</h3>
+  <p>Your ID: <span id="my-id">...</span></p>
+  <input type="text" id="peer-id" placeholder="Enter peer ID to call">
+  <button onclick="startWebcamCall()">Call (Webcam)</button>
+  <button onclick="startScreenShareCall()">Share Screen</button>
+
+  <h3>My Stream</h3>
   <video id="my-video" autoplay muted playsinline></video>
-
-  <h3>Remote Video</h3>
+  
+  <h3>Remote Stream</h3>
   <video id="remote-video" autoplay playsinline></video>
 
+  <!-- PeerJS CDN -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="script.js"></script>
+
+  <script>
+    const peer = new Peer(); // Uses default public PeerServer
+    let currentCall;
+
+    peer.on('open', (id) => {
+      document.getElementById('my-id').textContent = id;
+    });
+
+    // Answer incoming calls with webcam by default
+    peer.on('call', (call) => {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          document.getElementById('my-video').srcObject = stream;
+          call.answer(stream);
+          call.on('stream', (remoteStream) => {
+            document.getElementById('remote-video').srcObject = remoteStream;
+          });
+          currentCall = call;
+        })
+        .catch((err) => {
+          alert('Failed to get webcam for answering call.');
+          console.error(err);
+        });
+    });
+
+    function startWebcamCall() {
+      const peerId = document.getElementById('peer-id').value;
+      if (!peerId) return alert("Enter a peer ID!");
+
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          document.getElementById('my-video').srcObject = stream;
+          const call = peer.call(peerId, stream);
+          call.on('stream', (remoteStream) => {
+            document.getElementById('remote-video').srcObject = remoteStream;
+          });
+          currentCall = call;
+        })
+        .catch((err) => {
+          alert('Failed to access webcam.');
+          console.error(err);
+        });
+    }
+
+    function startScreenShareCall() {
+      const peerId = document.getElementById('peer-id').value;
+      if (!peerId) return alert("Enter a peer ID!");
+
+      navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        .then((screenStream) => {
+          document.getElementById('my-video').srcObject = screenStream;
+          const call = peer.call(peerId, screenStream);
+          call.on('stream', (remoteStream) => {
+            document.getElementById('remote-video').srcObject = remoteStream;
+          });
+          currentCall = call;
+
+          screenStream.getVideoTracks()[0].addEventListener('ended', () => {
+            alert('Screen sharing stopped.');
+            call.close();
+          });
+        })
+        .catch((err) => {
+          alert('Failed to access screen.');
+          console.error(err);
+        });
+    }
+  </script>
 </body>
 </html>

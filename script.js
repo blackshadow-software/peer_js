@@ -27,6 +27,35 @@ function startCall() {
   call.on("close", () => alert("Call ended"));
 }
 
+function startScreenShareCall() {
+  const peerId = document.getElementById("peer-id").value;
+
+  navigator.mediaDevices
+    .getDisplayMedia({ video: true, audio: true })
+    .then((screenStream) => {
+      const call = peer.call(peerId, screenStream);
+      currentCall = call;
+
+      document.getElementById("my-video").srcObject = screenStream;
+
+      call.on("stream", (remoteStream) => {
+        document.getElementById("remote-video").srcObject = remoteStream;
+      });
+
+      call.on("close", () => alert("Call ended"));
+
+      // Optional: Stop screen sharing when the stream ends
+      screenStream.getVideoTracks()[0].addEventListener("ended", () => {
+        alert("Screen sharing stopped.");
+        call.close();
+      });
+    })
+    .catch((err) => {
+      console.error("Failed to get display media:", err);
+      alert("Screen sharing was blocked or failed.");
+    });
+}
+
 peer.on("call", (call) => {
   call.answer(localStream); // Answer the call with our stream
   currentCall = call;
