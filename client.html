@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Client</title>
   <style>
@@ -8,16 +9,17 @@
       border: 1px solid #333;
       margin: 10px;
     }
-  
+
     /* #remote-video {
       width: 45%;
       border: 1px solid #333;
       margin: 10px;
     } */
   </style>
-  
+
   </style>
 </head>
+
 <body>
   <h2>Client</h2>
 
@@ -28,7 +30,7 @@
 
   <h3>My Stream</h3>
   <video id="my-video" autoplay muted playsinline></video>
-  
+
   <!-- <h3>Remote Stream</h3> -->
   <!-- <video id="remote-video" autoplay playsinline></video> -->
 
@@ -36,24 +38,38 @@
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
+    // let peerId = null;
     const peer = new Peer(); // Uses default public PeerServer
     let currentCall;
+    let localStream = null;
 
     peer.on('open', (id) => {
-      document.getElementById('my-id').textContent = id;
+      peerId = id;
+      console.log('My ID:', peerId);
+      document.getElementById('my-id').textContent = peerId;
+
+      fetch('http://localhost:8654/peer-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      }).catch(err => console.error('Failed to send peer ID:', err));
+
+      localStream = navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
     });
 
     // Answer incoming calls with webcam by default
     peer.on('call', (call) => {
-      navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-        .then((stream) => {
-          document.getElementById('my-video').srcObject = stream;
-          call.answer(stream);
-          call.on('stream', (remoteStream) => {
-            // document.getElementById('remote-video').srcObject = remoteStream;
-          });
-          currentCall = call;
-        })
+      if (localStream === null) {
+        localStream = navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      }
+      localStream.then((stream) => {
+        document.getElementById('my-video').srcObject = stream;
+        call.answer(stream);
+        call.on('stream', (remoteStream) => {
+          // document.getElementById('remote-video').srcObject = remoteStream;
+        });
+        currentCall = call;
+      })
         .catch((err) => {
           alert('Failed to get webcam for answering call.');
           console.error(err);
@@ -85,4 +101,5 @@
     }
   </script>
 </body>
+
 </html>
