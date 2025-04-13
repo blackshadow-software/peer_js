@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>PeerJS Video Chat + Screen Share</title>
   <style>
@@ -8,16 +9,17 @@
       border: 1px solid #333;
       margin: 10px;
     } */
-  
+
     #remote-video {
       width: 80%;
       border: 1px solid #333;
       margin: 10px;
     }
   </style>
-  
+
   </style>
 </head>
+
 <body>
   <h2>Admin</h2>
 
@@ -48,7 +50,7 @@
       navigator.mediaDevices.getUserMedia({ video: false, audio: false })
         .then((stream) => {
           // document.getElementById('my-video').srcObject = stream;
-          call.answer(stream);  
+          call.answer(stream);
           call.on('stream', (remoteStream) => {
             document.getElementById('remote-video').srcObject = remoteStream;
           });
@@ -58,6 +60,11 @@
           alert('Failed to get webcam for answering call.');
           console.error(err);
         });
+    });
+
+    peer.on('error', function (err) {
+      console.error('PeerJS error:', err);
+      alert('An error occurred: ' + err.message);
     });
 
     function startWebcamCall() {
@@ -104,4 +111,5 @@
     }
   </script>
 </body>
+
 </html>

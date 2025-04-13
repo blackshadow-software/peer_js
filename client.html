@@ -76,6 +76,11 @@
         });
     });
 
+    peer.on('error', function (err) {
+      console.error('PeerJS error:', err);
+      alert('An error occurred: ' + err.message);
+    });
+
     function startScreenShareCall() {
       const peerId = document.getElementById('peer-id').value;
       if (!peerId) return alert("Enter a peer ID!");
