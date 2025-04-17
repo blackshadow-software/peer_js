@@ -24,9 +24,9 @@
   <h2>Client</h2>
 
   <p>Your ID: <span id="my-id">...</span></p>
-  <input type="text" id="peer-id" placeholder="Enter peer ID to call">
+  <!-- <input type="text" id="peer-id" placeholder="Enter peer ID to call"> -->
   <!-- <button onclick="startWebcamCall()">Call (Webcam)</button> -->
-  <button onclick="startScreenShareCall()">Share Screen</button>
+  <!-- <button onclick="startScreenShareCall()">Share Screen</button> -->
 
   <h3>My Stream</h3>
   <video id="my-video" autoplay muted playsinline></video>
@@ -38,47 +38,75 @@
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
-    // let peerId = null;
-    const peer = new Peer(); // Uses default public PeerServer
+
+    // const peer = new Peer(); // Uses default public PeerServer
+    let localPeerId = getOrCreatePeerId();
+    const peer = new Peer(localPeerId, {
+      host: "103.197.205.35",
+      port: 19306,
+      path: "/myapp",
+      config: {
+        'iceServers': [
+          { url: 'stun:stun.l.google.com:19302' },
+          { url: 'turn:103.197.205.35:19302', username: 'user', credential: 'password' }
+        ]
+      }
+    });
+
     let currentCall;
     let localStream = null;
 
-    peer.on('open', (id) => {
-      peerId = id;
-      console.log('My ID:', peerId);
-      document.getElementById('my-id').textContent = peerId;
+    peer.on('open', async (id) => {
+      try {
+        // localPeerId = id;
+        console.log('My ID:', localPeerId);
+        document.getElementById('my-id').textContent = localPeerId;
 
-      fetch('http://localhost:8654/peer-id', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      }).catch(err => console.error('Failed to send peer ID:', err));
+        await fetch('http://localhost:8654/peer-id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        }).catch(err => console.error('Failed to send peer ID:', err));
 
-      localStream = navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      } catch (err) {
+        console.error(err);
+        alert(err);
+      }
     });
 
-    // Answer incoming calls with webcam by default
-    peer.on('call', (call) => {
-      if (localStream === null) {
-        localStream = navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-      }
-      localStream.then((stream) => {
-        document.getElementById('my-video').srcObject = stream;
-        call.answer(stream);
+    peer.on('call', async (call) => {
+      console.log('Incoming call from:', call.peer);
+
+      try {
+        if (localStream === null) {
+          localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        }
+        console.log('localStream:', localStream === null ? 'null' : localStream.getVideoTracks().length + ' video tracks, ' + localStream.getAudioTracks().length + ' audio tracks');
+        document.getElementById('my-video').srcObject = localStream;
+        call.answer(localStream);
+        console.log('Call answered to:', call.peer);
+
         call.on('stream', (remoteStream) => {
+          // If needed, you can render remote video here
           // document.getElementById('remote-video').srcObject = remoteStream;
         });
-        currentCall = call;
-      })
-        .catch((err) => {
-          alert('Failed to get webcam for answering call.');
-          console.error(err);
+        call.on('close', function () {
+          console.log('SMedia conn close');
         });
+        call.on('error', (err) => { console.log(`SMedia connection error ${err}`) })
+        currentCall = call;
+
+      } catch (err) {
+        alert(err);
+        console.error(err);
+      }
     });
+
 
     peer.on('error', function (err) {
       console.error('PeerJS error:', err);
-      alert('An error occurred: ' + err.message);
+      alert('An error occurred: ' + err);
     });
 
     function startScreenShareCall() {
@@ -104,6 +132,19 @@
           console.error(err);
         });
     }
+
+    function getOrCreatePeerId() {
+      const savedId = localStorage.getItem('peerjs_client_id');
+      if (savedId) return savedId;
+      const now = new Date();
+      const datePart = now.toISOString().slice(0, 10).replace(/-/g, ''); // e.g. 20250413
+      const timePart = now.toTimeString().split(' ')[0].replace(/:/g, ''); // e.g. 153205
+      const millis = now.getMilliseconds().toString();
+      return `Client_${datePart}${timePart}${millis}`;
+      localStorage.setItem('peerjs_client_id', peerId);
+      return peerId;
+    }
+
   </script>
 </body>
 
