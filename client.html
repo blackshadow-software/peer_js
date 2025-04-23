@@ -128,25 +128,25 @@
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
-    // Generate or get client ID
-    function getOrCreateClientId() {
-      const savedId = localStorage.getItem('peerjs_client_id');
-      if (savedId) return savedId;
+    // // Generate or get client ID
+    // function getOrCreateClientId() {
+    //   const savedId = localStorage.getItem('peerjs_client_id');
+    //   if (savedId) return savedId;
 
-      const now = new Date();
-      const datePart = now.toISOString().slice(0, 10).replace(/-/g, ''); // e.g. 20250413
-      const timePart = now.toTimeString().split(' ')[0].replace(/:/g, ''); // e.g. 153205
-      const millis = now.getMilliseconds().toString();
-      const peerId = `Client_${datePart}${timePart}${millis}`;
+    //   const now = new Date();
+    //   const datePart = now.toISOString().slice(0, 10).replace(/-/g, ''); // e.g. 20250413
+    //   const timePart = now.toTimeString().split(' ')[0].replace(/:/g, ''); // e.g. 153205
+    //   const millis = now.getMilliseconds().toString();
+    //   const peerId = `Client_${datePart}${timePart}${millis}`;
 
-      localStorage.setItem('peerjs_client_id', peerId);
-      return peerId;
-    }
+    //   localStorage.setItem('peerjs_client_id', peerId);
+    //   return peerId;
+    // }
 
     const config = getConfigFromURL();
     console.log(config);
 
-    const clientId = getOrCreateClientId();
+    const clientId = config.id;
     const peer = new Peer(clientId, {
       host: config.host,
       port: config.port,
