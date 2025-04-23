@@ -144,19 +144,19 @@
     // }
 
     const config = getConfigFromURL();
-    console.log(config);
+    const clientId = config.peerId;
+    const peer = new Peer(config.peerId, {
+      host: config.host,       // Your VPS public IP or domain
+      port: config.port,                // Your PeerJS server port
+      path: '/myapp',            // Custom path if you used one
+      // Set to true if you use HTTPS + WSS
 
-    const clientId = config.id;
-    const peer = new Peer(clientId, {
-      host: config.host,
-      port: config.port,
-      path: '/myapp',
       config: {
         iceServers: [
           { url: 'stun:stun.l.google.com:19302' },
-          { url: 'stun:${config.turnHost}:${config.turnPort}' },
+          { url: 'stun:' + config.turnHost + ':' + config.turnPort },
           {
-            url: 'turn:${config.turnHost}:${config.turnPort}',
+            url: 'turn:' + config.turnHost + ':' + config.turnPort,
             username: config.turnUsername,
             credential: config.turnCredential
           }]
@@ -203,15 +203,16 @@
       document.getElementById('sharing-status').style.color = 'red';
 
       // Handle when screen sharing is stopped by the user through the browser UI
-      stream.getVideoTracks()[0].addEventListener('ended', () => {
-        stopSharing();
-      });
+      // stream.getVideoTracks()[0].addEventListener('ended', () => {
+      //   stopSharing();
+      // });
 
       currentCall = call;
 
       // Handle call ending
       call.on('close', () => {
-        stopSharing();
+        console.log('Call closed');
+        // stopSharing();
       });
 
     }
@@ -219,7 +220,7 @@
     function getConfigFromURL() {
       const urlParams = new URLSearchParams(window.location.search);
       return {
-        id: urlParams.get('peerId'),
+        peerId: urlParams.get('peerId'),
         host: urlParams.get('host'),
         port: urlParams.get('port'),
         turnHost: urlParams.get('turnHost'),
@@ -257,6 +258,7 @@
         }
       }
       catch (err) {
+        console.log('Error accessing media devices.', err);
         console.error('Error accessing media devices.', err);
         document.getElementById('connection-status').textContent = 'Error accessing media devices';
       }
