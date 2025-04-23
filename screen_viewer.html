@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>PeerJS Admin Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      background-color: #f0f0f0;
+      padding-left: 20px;
+      padding-right: 20px;
+      border-radius: 20px;
+    }
+
+    .client-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .client-card {
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+      width: 200px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+    }
+
+    .client-card:hover {
+      background-color: #e9e9e9;
+    }
+
+    .client-card.active {
+      border: 2px solid #4CAF50;
+      border-radius: 20px;
+    }
+
+    .video-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+
+    #remote-video {
+      width: 90%;
+      border: 0px solid #4e4e4e;
+      background-color: #d6d6d6;
+      border-radius: 5px;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    .status {
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    /* Fullscreen Button Styling */
+    #fullscreen-btn {
+      padding: 8px 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    #fullscreen-btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h2>PeerJS Admin Dashboard</h2>
+    <div>
+      <strong>Admin ID:</strong> <span id="my-id">...</span>
+    </div>
+  </div>
+
+  <div class="status">Status: <span id="connection-status">Connecting to server...</span></div>
+
+  <div class="client-connection">
+    <input type="text" id="client-id" placeholder="Enter client ID to connect"
+      style="width:400px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+    <button id="connect-btn" onclick="connectToClient()">Connect to Client</button>
+    <button id="disconnect-btn" onclick="disconnectFromClient()" disabled>Disconnect</button>
+    <button id="fullscreen-btn">Go Fullscreen</button>
+  </div>
+
+  <br>
+  <div class="video-container">
+    <video id="remote-video" autoplay playsinline></video>
+    <!-- Fullscreen button -->
+    <!-- <button id="fullscreen-btn">Go Fullscreen</button> -->
+  </div>
+
+  <!-- PeerJS CDN -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+  <script>
+    let remoteStream = null;
+    let localPeerId = getOrCreatePeerId();
+    const peer = new Peer(localPeerId, {
+      host: '<YOUR_PEER_JS_SERVER_IP>', // Replace with your PeerJS server IP
+      port: 9000,
+      path: '/myapp',
+      config: {
+        iceServers: [
+          { url: 'stun:stun.l.google.com:19302' },
+          // IF YOU USE COTURN, USE SAME IP FOR STUN AND TURN
+          { url: 'stun:<YOUR_TURN_SERVER_IP>:3478' }, // Replace with your TURN server IP
+          {
+            url: 'turn:<YOUR_TURN_SERVER_IP>:3478', // Replace with your TURN server IP
+            username: '<USER_NAME>', // Replace with your TURN server username
+            credential: '<PASSWORD>' // Replace with your TURN server password
+          }]
+      }
+    });
+    let currentCall;
+
+    // Connection handling
+    peer.on('open', (id) => {
+      document.getElementById('my-id').textContent = id;
+      document.getElementById('connection-status').textContent = 'Connected to server';
+      document.getElementById('connection-status').style.color = 'green';
+    });
+
+    peer.on('error', (err) => {
+      document.getElementById('connection-status').textContent = `Error: ${err.type}`;
+      document.getElementById('connection-status').style.color = 'red';
+      console.error('PeerJS error:', err);
+    });
+
+    peer.on('disconnected', () => {
+      document.getElementById('connection-status').textContent = 'Disconnected from server';
+      document.getElementById('connection-status').style.color = 'orange';
+    });
+
+    function connectToClient() {
+      const clientId = document.getElementById('client-id').value;
+      if (!clientId) return alert("Enter a client ID!");
+
+      // Create an empty stream with no tracks
+      const emptyStream = new MediaStream();
+      navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(localStream => {
+        const call = peer.call(clientId, localStream);
+
+        // Call client with empty stream (will trigger screen sharing on client side)
+        call.on('stream', (remote) => {
+          remoteStream = remote;
+          document.getElementById('remote-video').srcObject = remoteStream;
+          document.getElementById('disconnect-btn').disabled = false;
+          document.getElementById('connect-btn').disabled = true;
+
+          setTimeout(() => {
+            localStream.getVideoTracks().forEach(track => track.stop());
+            localStream.getAudioTracks().forEach(track => track.stop());
+          }, 1000);  // Stop after 1 second
+
+        });
+
+        call.on('close', () => {
+          document.getElementById('remote-video').srcObject = null;
+          document.getElementById('disconnect-btn').disabled = true;
+          document.getElementById('connect-btn').disabled = false;
+        });
+
+        currentCall = call;
+      }).catch((err) => {
+        alert('Failed to access webcam.');
+        console.error(err);
+      });
+    }
+
+    function disconnectFromClient() {
+      if (currentCall) {
+        currentCall.close();
+        currentCall = null;
+      }
+
+      document.getElementById('remote-video').srcObject = null;
+      document.getElementById('disconnect-btn').disabled = true;
+      document.getElementById('connect-btn').disabled = false;
+    }
+
+    function getOrCreatePeerId() {
+      const savedId = localStorage.getItem('peerjs_admin_id');
+      if (savedId) return savedId;
+
+      const now = new Date();
+      const datePart = now.toISOString().slice(0, 10).replace(/-/g, ''); // e.g. 20250413
+      const timePart = now.toTimeString().split(' ')[0].replace(/:/g, ''); // e.g. 153205
+      const millis = now.getMilliseconds().toString();
+      const peerId = `Admin_${datePart}${timePart}${millis}`;
+
+      localStorage.setItem('peerjs_admin_id', peerId);
+      return peerId;
+    }
+
+    function toggleFullScreen() {
+      if (remoteStream === null) {
+        alert("No video stream available for fullscreen.");
+        return;
+      }
+      const videoElement = document.getElementById('remote-video');
+
+      if (videoElement.requestFullscreen) {
+        videoElement.requestFullscreen();
+      } else if (videoElement.mozRequestFullScreen) { // Firefox
+        videoElement.mozRequestFullScreen();
+      } else if (videoElement.webkitRequestFullscreen) { // Chrome, Safari, Opera
+        videoElement.webkitRequestFullscreen();
+      } else if (videoElement.msRequestFullscreen) { // IE/Edge
+        videoElement.msRequestFullscreen();
+      }
+    }
+
+    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullScreen);
+  </script>
+</body>
+
+</html>

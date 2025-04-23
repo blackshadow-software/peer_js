@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 700px;
+      max-width: 800px;
       margin: 0 auto;
       padding: 20px;
     }
@@ -36,7 +36,7 @@
     }
 
     #my-video {
-      width: 100%;
+      width: min(100%, 500px);
       border: 0px solid #696969;
       background-color: #dfdfdf;
       border-radius: 5px;
@@ -118,17 +118,18 @@
 
   <div class="header">
     <h2>My Screen (Preview)</h2>
+    <div class="controls">
+      <button id="stop-sharing-btn" onclick="stopSharing()" disabled>Stop Sharing</button>
+    </div>
   </div>
 
   <div class="video-container">
     <video id="my-video" autoplay muted playsinline></video>
   </div>
 
-  <!-- PeerJS CDN -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
-    // Generate or get client ID
     function getOrCreateClientId() {
       const savedId = localStorage.getItem('peerjs_client_id');
       if (savedId) return savedId;
@@ -143,22 +144,20 @@
       return peerId;
     }
 
-    const config = getConfigFromURL();
-    console.log(config);
-
     const clientId = getOrCreateClientId();
     const peer = new Peer(clientId, {
-      host: config.host,
-      port: config.port,
+      host: '<YOUR_PEER_SERVER_IP>', // Replace with your PeerJS server IP or domain
+      port: 9000,
       path: '/myapp',
       config: {
         iceServers: [
           { url: 'stun:stun.l.google.com:19302' },
-          { url: 'stun:${config.turnHost}:${config.turnPort}' },
+          // IF YOU USE COTURN, USE SAME IP FOR STUN AND TURN
+          { url: 'stun:<YOUR_TURN_SERVER_IP>:3478' }, // Replace with your STUN server IP
           {
-            url: 'turn:${config.turnHost}:${config.turnPort}',
-            username: config.turnUsername,
-            credential: config.turnCredential
+            url: 'turn:<YOUR_TURN_SERVER_IP>:3478', // Replace with your TURN server IP
+            username: '<USER_NAME>', // Replace with your TURN server username
+            credential: '<PASSWORD>' // Replace with your TURN server password
           }]
       }
     });
@@ -201,6 +200,7 @@
       // Update UI to show we're sharing
       document.getElementById('sharing-status').textContent = 'Sharing screen with admin';
       document.getElementById('sharing-status').style.color = 'red';
+      document.getElementById('stop-sharing-btn').disabled = false;
 
       // Handle when screen sharing is stopped by the user through the browser UI
       stream.getVideoTracks()[0].addEventListener('ended', () => {
@@ -216,17 +216,26 @@
 
     }
 
-    function getConfigFromURL() {
-      const urlParams = new URLSearchParams(window.location.search);
-      return {
-        id: urlParams.get('peerId'),
-        host: urlParams.get('host'),
-        port: urlParams.get('port'),
-        turnHost: urlParams.get('turnHost'),
-        turnPort: urlParams.get('turnPort'),
-        turnUsername: urlParams.get('turnUsername'),
-        turnCredential: urlParams.get('turnCredential')
-      };
+    function stopSharing() {
+      // Stop screen sharing
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      // Close the call if it exists
+      if (currentCall) {
+        currentCall.close();
+        currentCall = null;
+      }
+
+      // Reset video elements
+      document.getElementById('my-video').srcObject = null;
+
+      // Update UI
+      document.getElementById('sharing-status').textContent = 'Not sharing';
+      document.getElementById('sharing-status').style.color = 'initial';
+      document.getElementById('stop-sharing-btn').disabled = true;
     }
 
     function copyClientId() {

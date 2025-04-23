@@ -1,24 +1,27 @@
-use std::{env::temp_dir, fs::File, io::Write, sync::Arc};
+use std::{env::temp_dir, fs::File, io::Write};
 
-use anyhow::{bail, Result};
-use serde::Deserialize;
-use tokio::sync::{mpsc, Mutex};
-use warp::Filter;
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 
-pub async fn run_webview() -> Result<String> {
-    std::thread::spawn(|| {
+pub async fn run_webview(payload: &str) -> Result<()> {
+    let config: PeerConfig = serde_json::from_str(payload).expect("Error deserializing JSON");
+
+    std::thread::spawn(move || {
         let temp_dir = temp_dir();
         let file_path = temp_dir.join("temp_index.html");
 
         let content = include_str!("../client.html");
-
+        // file:///D:/peerjs_app/client.html?peerId=userid&host=23.98.93.20&port=9000&turnHost=turn.example.com&turnPort=3478&turnUsername=testuser&turnCredential=testpass&end=end
         match File::create(&file_path) {
             Ok(mut file) => {
                 if let Err(e) = file.write_all(content.as_bytes()) {
                     println!("❌ Failed to write to file: {}", e);
                 }
 
-                let url = format!("file:///{}", file_path.to_str().unwrap().replace('\\', "/"));
+                let base_url =
+                    format!("file:///{}", file_path.to_str().unwrap().replace('\\', "/"));
+                let params =format!("?peerId={}&host={}&port={}&turnHost={}&turnPort={}&turnUsername={}&turnCredential={}&end=end",config.id,config.host,config.port,config.turn_host,config.turn_port,config.turn_username,config.turn_credential);
+                let url = format!("{}{}", base_url, params);
                 match webbrowser::open(&url) {
                     Ok(_) => println!("✅ Opened webview at: {}", url),
                     Err(e) => eprintln!("❌ Failed to open webview: {}", e),
@@ -30,39 +33,18 @@ pub async fn run_webview() -> Result<String> {
             }
         }
     });
-    let (tx, mut rx) = mpsc::channel::<String>(1);
-    let tx_arc = Arc::new(Mutex::new(tx));
-    let cors = warp::cors()
-        .allow_any_origin()
-        .allow_method(warp::http::Method::POST)
-        .allow_header("content-type");
 
-    let route = warp::post()
-        .and(warp::path("peer-id"))
-        .and(warp::body::json())
-        .map(move |payload: PeerIdPayload| {
-            let tx_clone = tx_arc.clone();
-            tokio::spawn(async move {
-                let _ = tx_clone.lock().await.send(payload.id.clone()).await;
-            });
-            warp::reply()
-        })
-        .with(cors);
-
-    tokio::spawn(warp::serve(route).run(([127, 0, 0, 1], 8654)));
-
-    match rx.recv().await {
-        Some(id) => {
-            println!("✅ Received peer ID: {}", id);
-            Ok(id)
-        }
-        None => {
-            bail!("❌ Failed to receive peer ID")
-        }
-    }
+    Ok(())
 }
 
-#[derive(Deserialize)]
-struct PeerIdPayload {
+#[derive(Debug, Deserialize, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PeerConfig {
     id: String,
+    host: String,
+    port: String,
+    turn_host: String,
+    turn_port: String,
+    turn_username: String,
+    turn_credential: String,
 }
