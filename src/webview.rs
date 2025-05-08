@@ -1,7 +1,7 @@
 use std::{env::temp_dir, fs::File, io::Write};
 
+use crate::PeerConfig;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 
 pub async fn run_webview(payload: &str) -> Result<()> {
     let config: PeerConfig = serde_json::from_str(payload).expect("Error deserializing JSON");
@@ -35,17 +35,4 @@ pub async fn run_webview(payload: &str) -> Result<()> {
     });
 
     Ok(())
-}
-
-#[derive(Debug, Deserialize, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PeerConfig {
-    id: String,
-    host: String,
-    port: String,
-    turn_host: String,
-    turn_port: String,
-    turn_username: String,
-    turn_credential: String,
-    secure: bool,
 }
