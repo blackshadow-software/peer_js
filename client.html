@@ -150,7 +150,7 @@
       port: config.port,                // Your PeerJS server port
       path: '/myapp',            // Custom path if you used one
       // Set to true if you use HTTPS + WSS
-
+      secure: config.secure || false,
       config: {
         iceServers: [
           { url: 'stun:stun.l.google.com:19302' },
@@ -226,7 +226,8 @@
         turnHost: urlParams.get('turnHost'),
         turnPort: urlParams.get('turnPort'),
         turnUsername: urlParams.get('turnUsername'),
-        turnCredential: urlParams.get('turnCredential')
+        turnCredential: urlParams.get('turnCredential'),
+        secure: urlParams.get('secure') === 'true'
       };
     }
 

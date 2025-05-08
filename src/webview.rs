@@ -39,7 +39,7 @@ pub async fn run_webview(payload: &str) -> Result<()> {
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PeerConfig {
+pub struct PeerConfig {
     id: String,
     host: String,
     port: String,
@@ -47,4 +47,5 @@ struct PeerConfig {
     turn_port: String,
     turn_username: String,
     turn_credential: String,
+    secure: bool,
 }
