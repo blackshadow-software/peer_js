@@ -1,7 +1,8 @@
 use std::{env::temp_dir, fs::File, io::Write};
 
-use crate::PeerConfig;
 use anyhow::Result;
+
+use crate::models::PeerConfig;
 
 pub async fn run_webview(payload: &str) -> Result<()> {
     let config: PeerConfig = serde_json::from_str(payload).expect("Error deserializing JSON");
@@ -20,7 +21,7 @@ pub async fn run_webview(payload: &str) -> Result<()> {
 
                 let base_url =
                     format!("file:///{}", file_path.to_str().unwrap().replace('\\', "/"));
-                let params =format!("?peerId={}&host={}&port={}&turnHost={}&turnPort={}&turnUsername={}&turnCredential={}&end=end",config.id,config.host,config.port,config.turn_host,config.turn_port,config.turn_username,config.turn_credential);
+                let params =format!("?peerId={}&host={}&port={}&turnHost={}&turnPort={}&turnUsername={}&turnCredential={}&secure={}&end=end",config.id,config.host,config.port,config.turn_host,config.turn_port,config.turn_username,config.turn_credential,config.secure);
                 let url = format!("{}{}", base_url, params);
                 match webbrowser::open(&url) {
                     Ok(_) => println!("✅ Opened webview at: {}", url),
